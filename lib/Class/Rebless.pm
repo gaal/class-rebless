@@ -7,7 +7,7 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 $MAX_RECURSE = 1_000;
 
 =pod
@@ -105,6 +105,18 @@ for my $method (keys %subs) {
 	*{__PACKAGE__ . "::$method"} = $sub;
 }
 
+{
+	my $prune;
+	sub prune {
+		$prune = $_[1] if defined $_[1];
+		$prune;
+	}
+	sub need_prune {
+		return if not defined $prune;
+		return $_[1] eq $prune;
+	}
+}
+
 sub recurse {
 	my($proto, $obj, $namespace, $opts, $level) = @_;
 	my $class = ref($proto) || $proto;
@@ -118,13 +130,12 @@ sub recurse {
 		$opts->{code}->($class, $who, $namespace, $opts, $level);
 	};
 
-	# TODO: one day we may add prune semantics, and a 'return' based
-	# on the result of the following call will be the obvious way to
-	# do it. I'm not sure about safety, though. Well, in any case,
-	# the possibility of a prune is why the reblessing comes before
-	# the recursion.
-	$opts->{editor}->($obj, $namespace) if
-		Scalar::Util::blessed $obj; # re{bless,base} reference
+	# rebless this node, possibly pruning (skipping recursion
+	# over its children)
+	if (Scalar::Util::blessed $obj) {
+		my $res = $opts->{editor}->($obj, $namespace); # re{bless,base} ref
+		return $obj if $class->need_prune($res);
+	}
 	
 	my $type = Scalar::Util::reftype $obj;
 	if      ($type eq 'SCALAR') {
@@ -203,6 +214,21 @@ party objetcs, for example:
 (A more realistic example might actually use an inclusion filter, not
 an inclusion filter.)
 
+=item B<prune>
+
+    Class::Rebless->prune("__PRUNE__");
+	Class::Rebless->custom($myobj, "MyName", { editor => \&pruning_editor });
+
+When pruning is turned on, a custom reblesser has the opportunity to prune
+(skip) subtrees in the recursion of $myobj. All it needs to do to signal
+this is to return the string set in advance with the prune method.
+
+This feature is useful, like custom, for when you don't want to mess
+with members belonging to 3rd party classes that your object might be
+holding. Using the noio example above, the "return" can be changed to
+"return '__PRUNE__'". Anything the IO object refers to will not be
+visited by Class::Rebless.
+
 =back
 
 =head1 CAVEATS
@@ -211,11 +237,9 @@ Reblessing a tied object may produce unexpected results.
 
 =head1 TODO
 
-Add a "prune" feature, most likely by specifying a magic return value
-for custom rebless editors.
-
 Write a proper test suite (currently a rudimentary unit test is available
-by running "perl Class/Rebless.pm")
+by running "perl Class/Rebless.pm", but you'll have to read the source to
+figure out what exactly is the desired output).
 
 =head1 AUTHOR
 
@@ -261,6 +285,21 @@ if (!caller) {
 		});
 	print Data::Dumper::Dumper($beat);
 	print Data::Dumper::Dumper(\%__PACKAGE__::one);
+
+	print "==========\n";
+	Class::Rebless->prune("__PRUNE__");
+	my $pru = bless({ deep => bless({
+		__VALUE__ => "something" }, 'Untouched')
+	}, 'Base');
+	print Data::Dumper::Dumper(Class::Rebless->custom($pru, "Touched", {
+			editor => sub {
+				my ($obj, $class) = @_;
+				my $cur = ref($obj);
+				bless $obj, $class;
+				return "__PRUNE__" if $cur eq 'Base';
+			},
+		}
+	));
 }
 
  sub D { require Data::Dumper; print Data::Dumper::Dumper(@_) }
