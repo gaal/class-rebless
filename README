@@ -1,0 +1,12 @@
+Class::Rebless - Rebase namespaces, hierarchically
+
+Class::Rebless takes a Perl data structure and recurses through its
+hierarchy, reblessing objects that it finds along the way into new
+namespaces. This is typically useful when your object belongs to a
+package that is too close to the main namespace for your tastes, and
+you want to rebless everything down to your project's base namespace.
+
+
+Copyright (c) 2004 Gaal Yahas. All rights reserved.  This program is
+free software; you can redistribute it and/or modify it under the same
+terms as Perl itself.

@@ -1,14 +1,13 @@
 package Class::Rebless;
 
+require 5.005;
 use strict;
 use Carp;
-require 5.005;
+use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$|++;
-$VERSION = '0.01';
-$RE_BUILTIN = qr/^(CODE)|(REF)|(GLOB)|(LVALUE)$/o;
+$VERSION = '0.02';
 $MAX_RECURSE = 1_000;
 
 =pod
@@ -57,10 +56,8 @@ namespaces. This is typically useful when your object belongs to a
 package that is too close to the main namespace for your tastes, and
 you want to rebless everything down to your project's base namespace.
 
-Class::Rebless walks scalar, array, and hash references. As of this
-early version it assumes all other non-builtin references are objects
-with fields implemented as hashrefs and attempts to walk them as such.
-This limitation will be addressed in future versions.
+Class::Rebless walks scalar, array, and hash references. It uses
+Scalar::Util::reftype to discover how to walk blessed objects of any type.
 
 =cut
 
@@ -121,10 +118,16 @@ sub recurse {
 		$opts->{code}->($class, $who, $namespace, $opts, $level);
 	};
 
-	my $type = ref $obj;
-	if      (! $type) {
-		; # do nothing
-	} elsif ($type eq 'SCALAR') {
+	# TODO: one day we may add prune semantics, and a 'return' based
+	# on the result of the following call will be the obvious way to
+	# do it. I'm not sure about safety, though. Well, in any case,
+	# the possibility of a prune is why the reblessing comes before
+	# the recursion.
+	$opts->{editor}->($obj, $namespace) if
+		Scalar::Util::blessed $obj; # re{bless,base} reference
+	
+	my $type = Scalar::Util::reftype $obj;
+	if      ($type eq 'SCALAR') {
 		$recurse->($$obj);
 	} elsif ($type eq 'ARRAY') {
 		for my $elem (@$obj) {
@@ -134,20 +137,12 @@ sub recurse {
 		for my $val (values %$obj) {
 			$recurse->($val);
 		}
-	} elsif ($type =~ $RE_BUILTIN) {
-		; # do nothing
-	} else {
-		# TODO: one day we may add prune semantics, and a 'return' based
-		# on the result of the following call will be the obvious way to
-		# do it. I'm not sure about safety, though. Well, in any case,
-		# the possibility of a prune is why the reblessing comes before
-		# the recursion.
-		$opts->{editor}->($obj, $namespace); # re{bless,base} reference
-
-		# FIXME: the current implementation assumes all classes
-		# implement objects as a hashref. This will croak on
-		# non-hashref objects!
-		for my $val (values %$obj) { # same code as HASH
+	} elsif ($type eq 'GLOB') {
+		$recurse->(${ *$obj{SCALAR} });          # a glob has a scalar...
+		for my $elem (@{ *$obj{ARRAY} }) {       # and an array...
+			$recurse->($elem);
+		}
+		for my $val (values %{ *$obj{HASH} }) {  # ... and a hash.
 			$recurse->($val);
 		}
 	}
@@ -212,18 +207,14 @@ an inclusion filter.)
 
 =head1 CAVEATS
 
-As mentioned above, the present version assumes any objects it encounters
-along the recursion are blessed hashrefs. This will lead to disaster if
-a reblessing is attempted on less typical objects.
+Reblessing a tied object may produce unexpected results.
 
 =head1 TODO
-
-Figure out a way to detect object type.
 
 Add a "prune" feature, most likely by specifying a magic return value
 for custom rebless editors.
 
-Make a proper test suite (currently a rudimentary unit test is available
+Write a proper test suite (currently a rudimentary unit test is available
 by running "perl Class/Rebless.pm")
 
 =head1 AUTHOR
@@ -238,10 +229,11 @@ terms as Perl itself.
 
 if (!caller) {
 	require Data::Dumper;
+	%__PACKAGE__::one = ( hey => 'ho', yup => bless({yup=>1}, 'AOne'));
+	@__PACKAGE__::one = ( qw/boo bar bish/ );
+	my $glb = \*__PACKAGE__::one;
 	my $beat = bless({
-		one => bless({
-			hey => 'ho',
-		}, 'AOne'),
+		one => bless($glb, 'AOne'),
 		two => bless({
 			list => [
 				bless({ three => 3 }, 'AThree'),
@@ -268,8 +260,9 @@ if (!caller) {
 			},
 		});
 	print Data::Dumper::Dumper($beat);
+	print Data::Dumper::Dumper(\%__PACKAGE__::one);
 }
 
-# sub D { require Data::Dumper; print Data::Dumper::Dumper(@_) }
+ sub D { require Data::Dumper; print Data::Dumper::Dumper(@_) }
 
 1;
