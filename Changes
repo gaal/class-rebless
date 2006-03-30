@@ -1,0 +1,7 @@
+Fri, 31 Mar 2006 00:44:56 +0200  Gaal Yahas  <gaal@forum2.org>
+
+* This be 0.04.
+* Don't warn on undef values when using custom editor (closes: #6153).
+* Tests. Thanks, Gabor Szabo!
+
+

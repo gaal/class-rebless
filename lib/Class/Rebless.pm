@@ -7,7 +7,7 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 $MAX_RECURSE = 1_000;
 
 =pod
@@ -138,6 +138,7 @@ sub recurse {
 	}
 	
 	my $type = Scalar::Util::reftype $obj;
+	return $obj unless $type;
 	if      ($type eq 'SCALAR') {
 		$recurse->($$obj);
 	} elsif ($type eq 'ARRAY') {
@@ -244,6 +245,8 @@ figure out what exactly is the desired output).
 =head1 AUTHOR
 
 Gaal Yahas <gaal@forum2.org>
+
+Gabor Szabo <szabgab@gmail.com> has contributed many tests. Thanks!
 
 Copyright (c) 2004 Gaal Yahas. All rights reserved.  This program is
 free software; you can redistribute it and/or modify it under the same
