@@ -1,3 +1,12 @@
+* This be 0.05.
+* The fix from 0.04 was bogus. Detract bogosity.
+* Native filehandles are GLOBs, but their ARRAY slots are not defined.
+  This was causing crashes, so guard against that case.
+* Clean up closures generating editors. The module is now marginally faster
+  but the code is hopefully clearer.
+* Clean up docs and tests.
+
+
 Fri, 31 Mar 2006 00:44:56 +0200  Gaal Yahas  <gaal@forum2.org>
 
 * This be 0.04.

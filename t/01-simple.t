@@ -3,6 +3,7 @@ use strict;
 
 use Test::More;
 use Data::Dumper;
+use Scalar::Util qw(blessed);
 
 eval "use Test::NoWarnings";
 my $tests = 117;
@@ -16,11 +17,11 @@ plan tests => $tests;
 
 #################### prepare some subs
 
-# how else can one test that the given thing is not blessed?
+# object is "in sin", that is, not blessed.
 sub in_sin($;$) {
   my ($obj, $comment) = @_;
   my $t = Test::More->builder;
-  $t->unlike($obj, qr/=/, $comment); 
+  $t->ok(! blessed($obj), $comment); 
 }
 
 sub create_beat { 
@@ -116,19 +117,16 @@ require_ok 'Class::Rebless';
   isa_ok $fh, "FileHandler";
 
   eval{Class::Rebless->rebase($fh, "And");};
-  TODO: {
-    local $TODO = "fix the bug";
-    ok !$@, "Should not throw exception on rebase call";
-  }
+  ok !$@, "rebase on filehandles lives";
+  diag $@ if $@;
 
   isa_ok $fh, "GLOB";
   isa_ok $fh, "And::FileHandler";
 
   eval{Class::Rebless->rebless($fh, "NewFileHandler");};
-  TODO: {
-    local $TODO = "fix the bug";
-    ok !$@, "Should not throw exception on rebless call";
-  }
+  ok !$@, "rebless on filehandles lives";
+  diag $@ if $@;
+
   isa_ok $fh, "GLOB";
   isa_ok $fh, "NewFileHandler";
 }
@@ -291,19 +289,7 @@ sub my_custom_editor {
   return bless $obj, $namespace . '::Three3::' . ref $obj if "AThree" eq ref $obj;
   return bless $obj, $namespace . '::Four4::' . ref $obj if "AFour" eq ref $obj;
   return bless $obj, $namespace if "ASeven" eq ref $obj;
-  return "__MYPRUNE__" if "Deep"eq ref $obj;
+  return "__MYPRUNE__" if "Deep" eq ref $obj;
   return bless $obj, $namespace . '::' . ref $obj;
 }
 
-# There seem to be a bug that generates lots of warnings.
-# I patched the code but to eliminate the warnings, but I am not sure what is the real fix.
-
-# Currently if prune is not turned on but the custom editor returns some string a plain
-# string like "__MYPRUNE__", the specific object is kept as it is.
-# see test PRUNELESS
-
-
-
-# can prune be turned off once we set it ? 
-
-#GLOB is a filehandle
