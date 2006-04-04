@@ -1,3 +1,10 @@
+Tue, 04 Apr 2006 16:06:50 +0300  Gaal Yahas  <gaal@forum2.org>
+
+* This be 0.06.
+* Another bogosity fix, thanks Gabor Szabo for the test.
+
+Fri, 31 Mar 2006 10:32:00 +0200  Gaal Yahas  <gaal@forum2.org>
+
 * This be 0.05.
 * The fix from 0.04 was bogus. Detract bogosity.
 * Native filehandles are GLOBs, but their ARRAY slots are not defined.

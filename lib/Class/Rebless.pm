@@ -7,14 +7,14 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 $MAX_RECURSE = 1_000;
 
 =pod
 
 =head1 NAME
 
-Class::Rebless - Rebase namespaces, hierarchically
+Class::Rebless - Rebase deep data structures
 
 =head1 SYNOPSIS
 
@@ -158,7 +158,7 @@ sub recurse {
                 $recurse->($elem);
             }
         }
-        if (defined ($slot = *$obj{ARRAY})) {
+        if (defined ($slot = *$obj{HASH})) {
             for my $val (values %$slot) {        # ... and a hash.
                 $recurse->($val);
             }

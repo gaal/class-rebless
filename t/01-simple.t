@@ -6,7 +6,7 @@ use Data::Dumper;
 use Scalar::Util qw(blessed);
 
 eval "use Test::NoWarnings";
-my $tests = 117;
+my $tests = 130;
 if ($@) {
   diag 'Please consider installing Test::NoWarnings for an additional test';
 } else {
@@ -50,6 +50,7 @@ sub create_beat {
                       }, "Deeper"),
             }, "Deep"),
             #fh => bless $fh, "FileHandler",
+            none => undef,
          }, 'AOne');
 }
 
@@ -129,6 +130,28 @@ require_ok 'Class::Rebless';
 
   isa_ok $fh, "GLOB";
   isa_ok $fh, "NewFileHandler";
+}
+
+{
+  no strict;
+  $foo = 42;
+  @foo = (19, 23);
+  %foo = (field => "value");
+  my $bar = \*foo;
+  bless $bar, "Bar";
+  isa_ok $bar, "GLOB";
+  isa_ok $bar, "Bar";
+  is_deeply \@$$bar, [19, 23];
+  is_deeply \%$$bar, {field => "value"};
+  is $$$bar, 42, "sanity, got back 42 from GLOB";
+
+  Class::Rebless->rebase($bar, 'And');
+
+  isa_ok $bar, "GLOB";
+  isa_ok $bar, "And::Bar";
+  is $$$bar, 42, "got back 42 from GLOB";
+  is_deeply \@$$bar, [19, 23];
+  is_deeply \%$$bar, {field => "value"};
 }
 
 
@@ -253,7 +276,9 @@ require_ok 'Class::Rebless';
 {
   my $beat = create_beat();
 
+  ok !Class::Rebless->prune(), "no prune yet";
   Class::Rebless->prune("__MYPRUNE__");
+  is Class::Rebless->prune(), "__MYPRUNE__", "we have prune now";
   Class::Rebless->custom($beat, 'Custom', { editor => \&my_custom_editor });
 
   isa_ok $beat, "Custom::AOne";
@@ -282,6 +307,17 @@ require_ok 'Class::Rebless';
 
   is_deeply($beat, create_beat(), "structure is the same");
 }
+
+{
+  local $Class::Rebless::MAX_RECURSE = 1;
+  $Class::Rebless::MAX_RECURSE = 1; # to avoid warnings on single use
+  my $beat = create_beat();
+  eval {
+    Class::Rebless->rebless($beat, 'Beatless');
+  };
+  like $@, qr/maximum recursion level exceeded/, "deep recursion";
+}
+
 
 
 sub my_custom_editor {
