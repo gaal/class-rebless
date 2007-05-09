@@ -1,9 +1,14 @@
-use ExtUtils::MakeMaker;
+use inc::Module::Install;
 
 require 5.00502;
 
-WriteMakefile(
-    NAME                => 'Class::Rebless',
-    VERSION_FROM        => 'lib/Class/Rebless.pm',
-    PREREQ_PM           => { 'Scalar::Util' => '1.01', },
-);
+name('Class-Rebless');
+license('MIT');
+all_from('lib/Class/Rebless.pm');
+requires('Scalar::Util' => '1.01');
+
+sign;
+
+auto_install;
+WriteAll;
+

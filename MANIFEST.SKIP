@@ -1,0 +1,16 @@
+\.svn
+~$
+MANIFEST.mine
+MANIFEST.r
+[5-9]\d-.*\.t
+^Makefile$
+\.vim$
+\.cvsignore
+\.swp$
+^_build
+^blib
+^Build$
+Class-Rebless-
+^pm_to_blib
+\.bak$
+^svk-commit
