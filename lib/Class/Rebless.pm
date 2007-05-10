@@ -7,10 +7,120 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 $MAX_RECURSE = 1_000;
 
-=pod
+
+# MODULE INITIALIZATION
+
+my %subs = (
+    rebless => sub {
+        my($opts) = @_;
+        $opts->{editor} = sub {
+            my ($obj, $class) = @_;
+            bless $obj, $class;
+        };
+    },
+    rebase  => sub {
+        my($opts) = @_;
+        $opts->{editor} = sub {
+            my ($obj, $class) = @_;
+            bless $obj, $class . '::' . ref $obj;
+        };
+    },
+    custom  => sub {
+        my($opts) = @_;
+        $opts->{editor} or confess "custom reblesser requires an editor";
+    },
+);
+
+while (my($name, $editor) = each %subs) {
+    my $code;           # yay for recursive closures!
+    $code = sub {
+        my($proto, $obj, $namespace, $opts, $level) = @_;
+        $opts ||= {};
+        $opts->{code} = $code;
+        $editor->($opts);
+        
+        recurse($proto, $obj, $namespace, $opts, $level);
+        #goto &recurse; # I wonder why this doesn't work?
+    };
+    no strict 'refs';
+    *{__PACKAGE__ . "::$name"} = $code;
+}
+
+{
+    my $prune;
+    sub prune {
+        $prune = $_[1] if defined $_[1];
+        $prune;
+    }
+    sub need_prune {
+        return if not defined $prune;
+        return $_[1] eq $prune;
+    }
+}
+
+sub recurse {
+    my($proto, $obj, $namespace, $opts, $level) = @_;
+    my $class = ref($proto) || $proto;
+    $level++;
+    die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
+
+    my $recurse = sub {
+        my $who = shift;
+        #my $who = $_[0];
+        #print ">>>> recurse " . Carp::longmess;
+        $opts->{code}->($class, $who, $namespace, $opts, $level);
+    };
+
+    # rebless this node, possibly pruning (skipping recursion
+    # over its children)
+    if (Scalar::Util::blessed $obj) {
+        my $res = $opts->{editor}->($obj, $namespace); # re{bless,base} ref
+        return $obj if $class->need_prune($res);
+    }
+    
+    my $type = Scalar::Util::reftype $obj;
+    return $obj unless defined $type;
+
+    if      ($type eq 'SCALAR') {
+        $recurse->($$obj);
+    } elsif ($type eq 'ARRAY') {
+        for my $elem (@$obj) {
+            $recurse->($elem);
+        }
+    } elsif ($type eq 'HASH') {
+        for my $val (values %$obj) {
+            $recurse->($val);
+        }
+    } elsif ($type eq 'GLOB') {
+        # Filehandles are GLOBs, but they don't have ARRAY slots!
+        # Be paranoid, then, and recurse only on defined slots.
+
+        my $slot;
+
+        if (defined ($slot = *$obj{SCALAR})) {
+            $recurse->($$slot);                  # a glob has a scalar...
+        }
+        if (defined ($slot = *$obj{ARRAY})) {
+            for my $elem (@$slot) {              # and an array...
+                $recurse->($elem);
+            }
+        }
+        if (defined ($slot = *$obj{HASH})) {
+            for my $val (values %$slot) {        # ... and a hash.
+                $recurse->($val);
+            }
+        }
+    }
+    return $obj;
+}
+
+1;
+
+
+__END__
 
 =head1 NAME
 
@@ -59,116 +169,6 @@ you want to rebless everything down to your project's base namespace.
 Class::Rebless walks scalar, array, and hash references. It uses
 Scalar::Util::reftype to discover how to walk blessed objects of any type.
 
-=cut
-
-# MODULE INITIALIZATION
-
-my %subs = (
-	rebless => sub {
-        my($opts) = @_;
-        $opts->{editor} = sub {
-            my ($obj, $class) = @_;
-            bless $obj, $class;
-        };
-	},
-	rebase  => sub {
-        my($opts) = @_;
-        $opts->{editor} = sub {
-            my ($obj, $class) = @_;
-            bless $obj, $class . '::' . ref $obj;
-        };
-	},
-	custom  => sub {
-        my($opts) = @_;
-        $opts->{editor} or confess "custom reblesser requires an editor";
-    },
-);
-
-while (my($name, $editor) = each %subs) {
-    my $code;           # yay for recursive closures!
-    $code = sub {
-        my($proto, $obj, $namespace, $opts, $level) = @_;
-        $opts ||= {};
-        $opts->{code} = $code;
-        $editor->($opts);
-        
-        recurse($proto, $obj, $namespace, $opts, $level);
-        #goto &recurse; # I wonder why this doesn't work?
-    };
-	no strict 'refs';
-	*{__PACKAGE__ . "::$name"} = $code;
-}
-
-{
-	my $prune;
-	sub prune {
-		$prune = $_[1] if defined $_[1];
-		$prune;
-	}
-	sub need_prune {
-		return if not defined $prune;
-		return $_[1] eq $prune;
-	}
-}
-
-sub recurse {
-	my($proto, $obj, $namespace, $opts, $level) = @_;
-	my $class = ref($proto) || $proto;
-	$level++;
-	die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
-
-	my $recurse = sub {
-		my $who = shift;
-		#my $who = $_[0];
-		#print ">>>> recurse " . Carp::longmess;
-		$opts->{code}->($class, $who, $namespace, $opts, $level);
-	};
-
-	# rebless this node, possibly pruning (skipping recursion
-	# over its children)
-	if (Scalar::Util::blessed $obj) {
-		my $res = $opts->{editor}->($obj, $namespace); # re{bless,base} ref
-		return $obj if $class->need_prune($res);
-	}
-	
-	my $type = Scalar::Util::reftype $obj;
-	return $obj unless defined $type;
-
-	if      ($type eq 'SCALAR') {
-		$recurse->($$obj);
-	} elsif ($type eq 'ARRAY') {
-		for my $elem (@$obj) {
-			$recurse->($elem);
-		}
-	} elsif ($type eq 'HASH') {
-		for my $val (values %$obj) {
-			$recurse->($val);
-		}
-	} elsif ($type eq 'GLOB') {
-        # Filehandles are GLOBs, but they don't have ARRAY slots!
-        # Be paranoid, then, and recurse only on defined slots.
-
-        my $slot;
-
-        if (defined ($slot = *$obj{SCALAR})) {
-            $recurse->($$slot);                  # a glob has a scalar...
-        }
-        if (defined ($slot = *$obj{ARRAY})) {
-            for my $elem (@$slot) {              # and an array...
-                $recurse->($elem);
-            }
-        }
-        if (defined ($slot = *$obj{HASH})) {
-            for my $val (values %$slot) {        # ... and a hash.
-                $recurse->($val);
-            }
-        }
-	}
-	return $obj;
-}
-
-
-=pod
 
 =head2 Methods
 
@@ -224,7 +224,7 @@ an inclusion filter.)
 =item B<prune>
 
     Class::Rebless->prune("__PRUNE__");
-	Class::Rebless->custom($myobj, "MyName", { editor => \&pruning_editor });
+    Class::Rebless->custom($myobj, "MyName", { editor => \&pruning_editor });
 
 When pruning is turned on, a custom reblesser has the opportunity to prune
 (skip) subtrees in the recursion of $myobj. All it needs to do to signal
@@ -272,4 +272,3 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 =cut
 
-1;
