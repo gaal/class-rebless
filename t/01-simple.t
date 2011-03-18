@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w                                                                              
+#!/usr/bin/env perl -w
 use strict;
 
 use Test::More;
@@ -21,10 +21,10 @@ plan tests => $tests;
 sub in_sin($;$) {
   my ($obj, $comment) = @_;
   my $t = Test::More->builder;
-  $t->ok(! blessed($obj), $comment); 
+  $t->ok(! blessed($obj), $comment);
 }
 
-sub create_beat { 
+sub create_beat {
   open my $fh, "<", "Makefile.PL" or die "Could not open Makefile.PL for testing";
   return bless({
             one => bless({
@@ -93,7 +93,7 @@ require_ok 'Class::Rebless';
 }
 
 # rebasing and reblessing blessed scalar reference
-{ 
+{
   my $foo = "Foo";
   my $moo = bless \$foo, "Foo";
   isa_ok $moo, "SCALAR";
@@ -158,7 +158,7 @@ require_ok 'Class::Rebless';
 {
   my $beat = create_beat();
 
-  # before changing 
+  # before changing
   isa_ok $beat, "AOne";
   isa_ok $beat->{one}, "AOne";
   isa_ok $beat->{two}, "ATwo";
@@ -166,7 +166,7 @@ require_ok 'Class::Rebless';
   in_sin $beat->{func};
   isa_ok $beat->{funcy}, "CODE";
   isa_ok $beat->{funcy}, "AFunc";
-  is     $beat->{func}->(), 100, "hundred"; 
+  is     $beat->{func}->(), 100, "hundred";
   is     $beat->{funcy}->(), 42, "the answer";
 
   isa_ok $beat->{deep}, "HASH";
@@ -192,12 +192,12 @@ require_ok 'Class::Rebless';
   isa_ok $beat->{two}{list}[0], "And::AThree";
   isa_ok $beat->{two}{list}[1], "And::AFour";
   in_sin $beat->{two}{list}[2], "two list 2 is not blessed";
-  in_sin $beat->{two}{list}[3], "two list 3 is not blessed"; 
+  in_sin $beat->{two}{list}[3], "two list 3 is not blessed";
 
   in_sin $beat->{six}, "six is not blessed";
 
   isa_ok $beat->{six}{seven}, "And::ASeven";
-  isa_ok $beat->{six}{eight}, "And::AnEight";  
+  isa_ok $beat->{six}{eight}, "And::AnEight";
 
   in_sin $beat->{func};
   isa_ok $beat->{funcy}, "And::AFunc";
@@ -224,12 +224,12 @@ require_ok 'Class::Rebless';
   isa_ok $beat->{two}{list}[0], "Beatless";
   isa_ok $beat->{two}{list}[1], "Beatless";
   in_sin $beat->{two}{list}[2], "two list 2 is not blessed";
-  in_sin $beat->{two}{list}[3], "two list 3 is not blessed"; 
+  in_sin $beat->{two}{list}[3], "two list 3 is not blessed";
 
   in_sin $beat->{six}, "six is not blessed";
 
   isa_ok $beat->{six}{seven}, "Beatless";
-  isa_ok $beat->{six}{eight}, "Beatless";  
+  isa_ok $beat->{six}{eight}, "Beatless";
 
   in_sin $beat->{func};
   isa_ok $beat->{funcy}, "Beatless";
@@ -255,12 +255,12 @@ require_ok 'Class::Rebless';
   isa_ok $beat->{two}{list}[0], "Custom::Three3::AThree";
   isa_ok $beat->{two}{list}[1], "Custom::Four4::AFour";
   in_sin $beat->{two}{list}[2], "two list 2 is not blessed";
-  in_sin $beat->{two}{list}[3], "two list 3 is not blessed"; 
+  in_sin $beat->{two}{list}[3], "two list 3 is not blessed";
 
   in_sin $beat->{six}, "six is not blessed";
 
   isa_ok $beat->{six}{seven}, "Custom";
-  isa_ok $beat->{six}{eight}, "Custom::AnEight";  
+  isa_ok $beat->{six}{eight}, "Custom::AnEight";
 
   in_sin $beat->{func};
   isa_ok $beat->{funcy}, "Custom::AFunc";
@@ -289,12 +289,12 @@ require_ok 'Class::Rebless';
   isa_ok $beat->{two}{list}[0], "Custom::Three3::AThree";
   isa_ok $beat->{two}{list}[1], "Custom::Four4::AFour";
   in_sin $beat->{two}{list}[2], "two list 2 is not blessed";
-  in_sin $beat->{two}{list}[3], "two list 3 is not blessed"; 
+  in_sin $beat->{two}{list}[3], "two list 3 is not blessed";
 
   in_sin $beat->{six}, "six is not blessed";
 
   isa_ok $beat->{six}{seven}, "Custom";
-  isa_ok $beat->{six}{eight}, "Custom::AnEight";  
+  isa_ok $beat->{six}{eight}, "Custom::AnEight";
 
   in_sin $beat->{func};
   isa_ok $beat->{funcy}, "Custom::AFunc";
