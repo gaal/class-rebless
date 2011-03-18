@@ -25,7 +25,7 @@ sub in_sin($;$) {
 }
 
 sub create_beat { 
-  open my $fh, "<", "MANIFEST" or die "Could not open MANIFEST for testing";
+  open my $fh, "<", "Makefile.PL" or die "Could not open Makefile.PL for testing";
   return bless({
             one => bless({
                     hey => 'ho',
@@ -112,7 +112,7 @@ require_ok 'Class::Rebless';
 }
 
 {
-  open my $fh, "<", "MANIFEST" or die;
+  open my $fh, "<", "Makefile.PL" or die;
   bless $fh, "FileHandler";
   isa_ok $fh, "GLOB";
   isa_ok $fh, "FileHandler";
