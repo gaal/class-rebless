@@ -41,8 +41,8 @@ while (my($name, $editor) = each %subs) {
         $opts ||= {};
         $opts->{code} = $code;
         $editor->($opts);
-        
-        recurse($proto, $obj, $namespace, $opts, $level);
+
+        _recurse($proto, $obj, $namespace, $opts, $level);
         #goto &recurse; # I wonder why this doesn't work?
     };
     no strict 'refs';
@@ -61,7 +61,7 @@ while (my($name, $editor) = each %subs) {
     }
 }
 
-sub recurse {
+sub _recurse {
     my($proto, $obj, $namespace, $opts, $level) = @_;
     my $class = ref($proto) || $proto;
     $level++;
@@ -80,7 +80,7 @@ sub recurse {
         my $res = $opts->{editor}->($obj, $namespace); # re{bless,base} ref
         return $obj if $class->need_prune($res);
     }
-    
+
     my $type = Scalar::Util::reftype $obj;
     return $obj unless defined $type;
 
