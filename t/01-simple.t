@@ -5,15 +5,9 @@ use Test::More;
 use Data::Dumper;
 use Scalar::Util qw(blessed);
 
-eval "use Test::NoWarnings";
-my $tests = 130;
-if ($@) {
+unless (eval "use Test::NoWarnings; 1") {
   diag 'Please consider installing Test::NoWarnings for an additional test';
-} else {
-  $tests++;
 }
-plan tests => $tests;
-
 
 #################### prepare some subs
 
@@ -328,6 +322,9 @@ require_ok 'Class::Rebless';
   Class::Rebless->rebless($obj_1, 'Foo');
 }
 
+# in an END{} because there's a previously-registered END{} for
+# Test::NoWarnings, potentially -- rjbs, 2011-03-21
+END { done_testing; }
 
 sub my_custom_editor {
   my ($obj, $namespace) = @_;
