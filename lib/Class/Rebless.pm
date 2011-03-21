@@ -7,7 +7,7 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.08';
+$VERSION = '0.09';
 $MAX_RECURSE = 1_000;
 
 
