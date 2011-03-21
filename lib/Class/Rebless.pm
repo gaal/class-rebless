@@ -37,12 +37,12 @@ my %subs = (
 while (my($name, $editor) = each %subs) {
     my $code;           # yay for recursive closures!
     $code = sub {
-        my($proto, $obj, $namespace, $opts, $level) = @_;
+        my($proto, $obj, $namespace, $opts, $level, $seen) = @_;
         $opts ||= {};
         $opts->{code} = $code;
         $editor->($opts);
 
-        _recurse($proto, $obj, $namespace, $opts, $level);
+        _recurse($proto, $obj, $namespace, $opts, $level, $seen);
         #goto &recurse; # I wonder why this doesn't work?
     };
     no strict 'refs';
