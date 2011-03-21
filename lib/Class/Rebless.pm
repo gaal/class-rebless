@@ -34,19 +34,21 @@ my %subs = (
     },
 );
 
-while (my($name, $editor) = each %subs) {
-    my $code;           # yay for recursive closures!
-    $code = sub {
-        my($proto, $obj, $namespace, $opts, $level, $seen) = @_;
-        $opts ||= {};
-        $opts->{code} = $code;
-        $editor->($opts);
-
-        _recurse($proto, $obj, $namespace, $opts, $level, $seen);
-        #goto &recurse; # I wonder why this doesn't work?
-    };
+while (my($name, $add_editor_to_opts) = each %subs) {
     no strict 'refs';
-    *{__PACKAGE__ . "::$name"} = $code;
+    *{__PACKAGE__ . "::$name"} = sub {
+        my ($proto, $obj, $namespace, $opts) = @_;
+
+        my $class = ref($proto) || $proto;
+
+        $opts ||= {};
+        $add_editor_to_opts->($opts);
+
+        my $level = 0;
+        my $seen  = {};
+
+        $class->_recurse($obj, $namespace, $opts, $level, $seen);
+    };
 }
 
 {
@@ -62,13 +64,11 @@ while (my($name, $editor) = each %subs) {
 }
 
 sub _recurse {
-    my($proto, $obj, $namespace, $opts, $level, $seen) = @_;
-    my $class = ref($proto) || $proto;
-    $level++;
+    my ($class, $obj, $namespace, $opts, $level, $seen) = @_;
 
     # If MAX_RECURSE is 10, we should be allowed to recurse ten times before
     # throwing an exception.  That means we only throw an exception at #11.
-    die "maximum recursion level exceeded" if $level > $MAX_RECURSE + 1;
+    die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
 
     $seen ||= {};
 
@@ -81,7 +81,7 @@ sub _recurse {
         return if defined $refaddr and $seen->{ $refaddr };
         local $seen->{ defined $refaddr ? $refaddr : '' } = 1;
 
-        $opts->{code}->($class, $who, $namespace, $opts, $level, $seen);
+        $class->_recurse($who, $namespace, $opts, $level+1, $seen);
     };
 
     # rebless this node, possibly pruning (skipping recursion
