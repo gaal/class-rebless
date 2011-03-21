@@ -65,7 +65,10 @@ sub _recurse {
     my($proto, $obj, $namespace, $opts, $level, $seen) = @_;
     my $class = ref($proto) || $proto;
     $level++;
-    die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
+
+    # If MAX_RECURSE is 10, we should be allowed to recurse ten times before
+    # throwing an exception.  That means we only throw an exception at #11.
+    die "maximum recursion level exceeded" if $level > $MAX_RECURSE + 1;
 
     $seen ||= {};
 

@@ -303,13 +303,21 @@ require_ok 'Class::Rebless';
 }
 
 {
-  local $Class::Rebless::MAX_RECURSE = 1;
-  $Class::Rebless::MAX_RECURSE = 1; # to avoid warnings on single use
-  my $beat = create_beat();
-  eval {
-    Class::Rebless->rebless($beat, 'Beatless');
-  };
-  like $@, qr/maximum recursion level exceeded/, "deep recursion";
+  my $structure = [ 1, [ 2, [ 3, ] ] ];
+
+  {
+    local $Class::Rebless::MAX_RECURSE = 3;
+    local $@;
+    my $ok = eval { Class::Rebless->rebless($structure, 'Bogus'); 1 };
+    ok($ok, "we can recurse up to MAX_RECURSE times") or diag "error: $@";
+  }
+
+  {
+    local $Class::Rebless::MAX_RECURSE = 2;
+    local $@;
+    my $ok = eval { Class::Rebless->rebless($structure, 'Bogus'); 1 };
+    like $@, qr/maximum recursion level exceeded/, "...but no more";
+  }
 }
 
 {
