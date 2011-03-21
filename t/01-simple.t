@@ -318,6 +318,15 @@ require_ok 'Class::Rebless';
   like $@, qr/maximum recursion level exceeded/, "deep recursion";
 }
 
+{
+  my $obj_1 = bless {} => 'X';
+  my $obj_2 = bless {} => 'X';
+
+  $obj_1->{obj_2} = $obj_2;
+  $obj_2->{obj_1} = $obj_1;
+
+  Class::Rebless->rebless($obj_1, 'Foo');
+}
 
 
 sub my_custom_editor {

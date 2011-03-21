@@ -62,16 +62,23 @@ while (my($name, $editor) = each %subs) {
 }
 
 sub _recurse {
-    my($proto, $obj, $namespace, $opts, $level) = @_;
+    my($proto, $obj, $namespace, $opts, $level, $seen) = @_;
     my $class = ref($proto) || $proto;
     $level++;
     die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
+
+    $seen ||= {};
 
     my $recurse = sub {
         my $who = shift;
         #my $who = $_[0];
         #print ">>>> recurse " . Carp::longmess;
-        $opts->{code}->($class, $who, $namespace, $opts, $level);
+
+        my $refaddr = Scalar::Util::refaddr($who);
+        return if defined $refaddr and $seen->{ $refaddr };
+        local $seen->{ defined $refaddr ? $refaddr : '' } = 1;
+
+        $opts->{code}->($class, $who, $namespace, $opts, $level, $seen);
     };
 
     # rebless this node, possibly pruning (skipping recursion
