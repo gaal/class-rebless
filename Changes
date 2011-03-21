@@ -1,8 +1,8 @@
 Mon, 21 Mar 2011 15:39:00 -0400
 
-* This be 0.09
-* do not descend into branches we've seen, in cyclical structures (RJBS)
-* do not expose private recursor arguments via the public API
+* This be 0.09.
+* Do not descend into branches we've seen, in cyclical structures. (RJBS)
+* Do not expose private recursor arguments via the public API.
 
 Thu, 10 May 2007 19:24:11 +0300  Gaal Yahas  <gaal@forum2.org>
 

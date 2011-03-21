@@ -78,7 +78,7 @@ sub _recurse {
         #print ">>>> recurse " . Carp::longmess;
 
         my $refaddr = Scalar::Util::refaddr($who);
-        return if defined $refaddr and $seen->{ $refaddr };
+        return if defined $refaddr and $seen->{$refaddr};
         local $seen->{ defined $refaddr ? $refaddr : '' } = 1;
 
         $class->_recurse($who, $namespace, $opts, $level+1, $seen);
