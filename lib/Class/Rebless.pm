@@ -254,13 +254,15 @@ Reblessing a tied object may produce unexpected results.
 
 =head1 AUTHOR
 
-Gaal Yahas <gaal@forum2.org>
+Gaal Yahas E<lt>gaal@forum2.orgE<gt>
 
-Gabor Szabo <szabgab@gmail.com> has contributed many tests. Thanks!
+Gabor Szabo E<lt>szabgab@gmail.comE<gt> has contributed many tests. Thanks!
+
+Ricardo Signes E<lt>rjbs@cpan.orgE<gt> has contributed bugfixes. Thanks!
 
 =head1 COPYRIGHT (The "MIT" License)
 
-Copyright 2004-2007 Gaal Yahas.
+Copyright 2004-2011 Gaal Yahas.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
