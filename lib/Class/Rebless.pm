@@ -79,7 +79,10 @@ sub _recurse {
         #print ">>>> recurse " . Carp::longmess;
 
         my $refaddr = Scalar::Util::refaddr($who);
-        return if defined $refaddr and $state->{stack}{$refaddr};
+        if (defined $refaddr) {
+          return if $state->{stack}{$refaddr};
+          return if $state->{seen}{$refaddr}++ and ! $opts->{revisit};
+        }
 
         local $state->{level} = $state->{level} + 1;
         local $state->{stack}{ defined $refaddr ? $refaddr : '' } = 1;
