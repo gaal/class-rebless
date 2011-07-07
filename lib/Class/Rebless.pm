@@ -44,10 +44,13 @@ while (my($name, $add_editor_to_opts) = each %subs) {
         $opts ||= {};
         $add_editor_to_opts->($opts);
 
-        my $level = 0;
-        my $seen  = {};
+        my $state = {
+          level => 0,
+          stack => { },
+          seen  => { },
+        };
 
-        $class->_recurse($obj, $namespace, $opts, $level, $seen);
+        $class->_recurse($obj, $namespace, $opts, $state);
     };
 }
 
@@ -64,13 +67,11 @@ while (my($name, $add_editor_to_opts) = each %subs) {
 }
 
 sub _recurse {
-    my ($class, $obj, $namespace, $opts, $level, $seen) = @_;
+    my ($class, $obj, $namespace, $opts, $state) = @_;
 
     # If MAX_RECURSE is 10, we should be allowed to recurse ten times before
     # throwing an exception.  That means we only throw an exception at #11.
-    die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
-
-    $seen ||= {};
+    die "maximum recursion level exceeded" if $state->{level} > $MAX_RECURSE;
 
     my $recurse = sub {
         my $who = shift;
@@ -78,10 +79,12 @@ sub _recurse {
         #print ">>>> recurse " . Carp::longmess;
 
         my $refaddr = Scalar::Util::refaddr($who);
-        return if defined $refaddr and $seen->{$refaddr};
-        local $seen->{ defined $refaddr ? $refaddr : '' } = 1;
+        return if defined $refaddr and $state->{stack}{$refaddr};
 
-        $class->_recurse($who, $namespace, $opts, $level+1, $seen);
+        local $state->{level} = $state->{level} + 1;
+        local $state->{stack}{ defined $refaddr ? $refaddr : '' } = 1;
+
+        $class->_recurse($who, $namespace, $opts, $state);
     };
 
     # rebless this node, possibly pruning (skipping recursion
