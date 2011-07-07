@@ -73,22 +73,14 @@ sub _recurse {
     # throwing an exception.  That means we only throw an exception at #11.
     die "maximum recursion level exceeded" if $state->{level} > $MAX_RECURSE;
 
-    my $recurse = sub {
-        my $who = shift;
-        #my $who = $_[0];
-        #print ">>>> recurse " . Carp::longmess;
+    my $refaddr = Scalar::Util::refaddr($obj);
+    if (defined $refaddr) {
+      return $obj if $state->{stack}{$refaddr};
+      return $obj if $state->{seen}{$refaddr}++ and ! $opts->{revisit};
+    }
 
-        my $refaddr = Scalar::Util::refaddr($who);
-        if (defined $refaddr) {
-          return if $state->{stack}{$refaddr};
-          return if $state->{seen}{$refaddr}++ and ! $opts->{revisit};
-        }
-
-        local $state->{level} = $state->{level} + 1;
-        local $state->{stack}{ defined $refaddr ? $refaddr : '' } = 1;
-
-        $class->_recurse($who, $namespace, $opts, $state);
-    };
+    local $state->{level} = $state->{level} + 1;
+    local $state->{stack}{ defined $refaddr ? $refaddr : '' } = 1;
 
     # rebless this node, possibly pruning (skipping recursion
     # over its children)
@@ -101,14 +93,14 @@ sub _recurse {
     return $obj unless defined $type;
 
     if      ($type eq 'SCALAR') {
-        $recurse->($$obj);
+        $class->_recurse($$obj, $namespace, $opts, $state);
     } elsif ($type eq 'ARRAY') {
         for my $elem (@$obj) {
-            $recurse->($elem);
+            $class->_recurse($elem, $namespace, $opts, $state);
         }
     } elsif ($type eq 'HASH') {
         for my $val (values %$obj) {
-            $recurse->($val);
+            $class->_recurse($val, $namespace, $opts, $state);
         }
     } elsif ($type eq 'GLOB') {
         # Filehandles are GLOBs, but they don't have ARRAY slots!
@@ -116,17 +108,17 @@ sub _recurse {
 
         my $slot;
 
-        if (defined ($slot = *$obj{SCALAR})) {
-            $recurse->($$slot);                  # a glob has a scalar...
+        if (defined ($slot = *$obj{SCALAR})) {   # a glob has a scalar...
+            $class->_recurse($$slot, $namespace, $opts, $state);
         }
         if (defined ($slot = *$obj{ARRAY})) {
             for my $elem (@$slot) {              # and an array...
-                $recurse->($elem);
+              $class->_recurse($elem, $namespace, $opts, $state);
             }
         }
         if (defined ($slot = *$obj{HASH})) {
             for my $val (values %$slot) {        # ... and a hash.
-                $recurse->($val);
+                $class->_recurse($val, $namespace, $opts, $state);
             }
         }
     }
