@@ -185,16 +185,37 @@ you want to rebless everything down to your project's base namespace.
 Class::Rebless walks scalar, array, and hash references. It uses
 Scalar::Util::reftype to discover how to walk blessed objects of any type.
 
-
-=head2 Methods
+=head1 METHODS
 
 Class::Rebless defines B<only class methods>. There is no instance
 constructor, and when calling these methods you should take care not
 to call them in function form by mistake; that would not do at all.
 
-=over 4
+=head2 Reblessing Methods
 
-=item B<rebless>
+All these methods take arguments like this:
+
+    Class::Rebless->method($root, $namespace, \%opts);
+
+The C<$root> object is the place where the visitor begins to crawl the
+structure for things to rebless.
+
+The C<$namespace> is used differently by different methods, generally as the
+class name or partial class name into which to rebless objects.  Some
+reblessing methods may ignore it entirely.
+
+The C<\%opts> hashref is a container for the rest of the options.  They are:
+
+    editor  - the coderef used to rebless;  It is called for each object
+              with the object and $namespace as its argument.  This option
+              is set by default by the "rebless" and "rebase" methods, and
+              is in fact all they do.
+
+    revisit - If true, the visitor will descend into references it has seen
+              before.  By default, it is false, and once a reference has
+              been visited once, it will not be visited again.
+
+=head3 rebless
 
     Class::Rebless->rebless($myobj, "New::Namespace");
 
@@ -202,7 +223,7 @@ Finds all blessed objects refered to by $myobj and reblesses them into
 New::Namespace. This completely overrides whatever blessing they had
 before.
 
-=item B<rebase>
+=head3 rebase
 
     Class::Rebless->rebase($myobj, "New::Namespace::Root");
 
@@ -212,7 +233,7 @@ blessing they had before, but unlike B<rebless>, it preseves something
 of the original name. So if you had an object blessed into "MyClass",
 it will now be blessed into "New::Namespace::Root::MyClass".
 
-=item B<custom>
+=head3 custom
 
     Class::Rebless->custom($myobj, "MyName", { editor => \&my_editor });
 
@@ -237,7 +258,7 @@ party objetcs, for example:
 (A more realistic example might actually use an inclusion filter, not
 an inclusion filter.)
 
-=item B<prune>
+=head2 prune
 
     Class::Rebless->prune("__PRUNE__");
     Class::Rebless->custom($myobj, "MyName", { editor => \&pruning_editor });
@@ -251,8 +272,6 @@ with members belonging to 3rd party classes that your object might be
 holding. Using the noio example above, the "return" can be changed to
 "return '__PRUNE__'". Anything the IO object refers to will not be
 visited by Class::Rebless.
-
-=back
 
 =head1 CAVEATS
 
