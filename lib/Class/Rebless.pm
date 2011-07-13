@@ -7,7 +7,7 @@ use Scalar::Util;
 
 use vars qw($VERSION $RE_BUILTIN $MAX_RECURSE);
 
-$VERSION = '0.09';
+$VERSION = '0.10';
 $MAX_RECURSE = 1_000;
 
 
@@ -44,10 +44,13 @@ while (my($name, $add_editor_to_opts) = each %subs) {
         $opts ||= {};
         $add_editor_to_opts->($opts);
 
-        my $level = 0;
-        my $seen  = {};
+        my $state = {
+          level => 0,
+          stack => { },
+          seen  => { },
+        };
 
-        $class->_recurse($obj, $namespace, $opts, $level, $seen);
+        $class->_recurse($obj, $namespace, $opts, $state);
     };
 }
 
@@ -64,25 +67,20 @@ while (my($name, $add_editor_to_opts) = each %subs) {
 }
 
 sub _recurse {
-    my ($class, $obj, $namespace, $opts, $level, $seen) = @_;
+    my ($class, $obj, $namespace, $opts, $state) = @_;
 
     # If MAX_RECURSE is 10, we should be allowed to recurse ten times before
     # throwing an exception.  That means we only throw an exception at #11.
-    die "maximum recursion level exceeded" if $level > $MAX_RECURSE;
+    die "maximum recursion level exceeded" if $state->{level} > $MAX_RECURSE;
 
-    $seen ||= {};
+    my $refaddr = Scalar::Util::refaddr($obj);
+    if (defined $refaddr) {
+      return $obj if $state->{stack}{$refaddr};
+      return $obj if $state->{seen}{$refaddr}++ and ! $opts->{revisit};
+    }
 
-    my $recurse = sub {
-        my $who = shift;
-        #my $who = $_[0];
-        #print ">>>> recurse " . Carp::longmess;
-
-        my $refaddr = Scalar::Util::refaddr($who);
-        return if defined $refaddr and $seen->{$refaddr};
-        local $seen->{ defined $refaddr ? $refaddr : '' } = 1;
-
-        $class->_recurse($who, $namespace, $opts, $level+1, $seen);
-    };
+    local $state->{level} = $state->{level} + 1;
+    local $state->{stack}{ defined $refaddr ? $refaddr : '' } = 1;
 
     # rebless this node, possibly pruning (skipping recursion
     # over its children)
@@ -95,14 +93,14 @@ sub _recurse {
     return $obj unless defined $type;
 
     if      ($type eq 'SCALAR') {
-        $recurse->($$obj);
+        $class->_recurse($$obj, $namespace, $opts, $state);
     } elsif ($type eq 'ARRAY') {
         for my $elem (@$obj) {
-            $recurse->($elem);
+            $class->_recurse($elem, $namespace, $opts, $state);
         }
     } elsif ($type eq 'HASH') {
         for my $val (values %$obj) {
-            $recurse->($val);
+            $class->_recurse($val, $namespace, $opts, $state);
         }
     } elsif ($type eq 'GLOB') {
         # Filehandles are GLOBs, but they don't have ARRAY slots!
@@ -110,17 +108,17 @@ sub _recurse {
 
         my $slot;
 
-        if (defined ($slot = *$obj{SCALAR})) {
-            $recurse->($$slot);                  # a glob has a scalar...
+        if (defined ($slot = *$obj{SCALAR})) {   # a glob has a scalar...
+            $class->_recurse($$slot, $namespace, $opts, $state);
         }
         if (defined ($slot = *$obj{ARRAY})) {
             for my $elem (@$slot) {              # and an array...
-                $recurse->($elem);
+              $class->_recurse($elem, $namespace, $opts, $state);
             }
         }
         if (defined ($slot = *$obj{HASH})) {
             for my $val (values %$slot) {        # ... and a hash.
-                $recurse->($val);
+                $class->_recurse($val, $namespace, $opts, $state);
             }
         }
     }
@@ -179,16 +177,37 @@ you want to rebless everything down to your project's base namespace.
 Class::Rebless walks scalar, array, and hash references. It uses
 Scalar::Util::reftype to discover how to walk blessed objects of any type.
 
-
-=head2 Methods
+=head1 METHODS
 
 Class::Rebless defines B<only class methods>. There is no instance
 constructor, and when calling these methods you should take care not
 to call them in function form by mistake; that would not do at all.
 
-=over 4
+=head2 Reblessing Methods
 
-=item B<rebless>
+All these methods take arguments like this:
+
+    Class::Rebless->method($root, $namespace, \%opts);
+
+The C<$root> object is the place where the visitor begins to crawl the
+structure for things to rebless.
+
+The C<$namespace> is used differently by different methods, generally as the
+class name or partial class name into which to rebless objects.  Some
+reblessing methods may ignore it entirely.
+
+The C<\%opts> hashref is a container for the rest of the options.  They are:
+
+    editor  - the coderef used to rebless;  It is called for each object
+              with the object and $namespace as its argument.  This option
+              is set by default by the "rebless" and "rebase" methods, and
+              is in fact all they do.
+
+    revisit - If true, the visitor will descend into references it has seen
+              before.  By default, it is false, and once a reference has
+              been visited once, it will not be visited again.
+
+=head3 rebless
 
     Class::Rebless->rebless($myobj, "New::Namespace");
 
@@ -196,7 +215,7 @@ Finds all blessed objects refered to by $myobj and reblesses them into
 New::Namespace. This completely overrides whatever blessing they had
 before.
 
-=item B<rebase>
+=head3 rebase
 
     Class::Rebless->rebase($myobj, "New::Namespace::Root");
 
@@ -206,7 +225,7 @@ blessing they had before, but unlike B<rebless>, it preseves something
 of the original name. So if you had an object blessed into "MyClass",
 it will now be blessed into "New::Namespace::Root::MyClass".
 
-=item B<custom>
+=head3 custom
 
     Class::Rebless->custom($myobj, "MyName", { editor => \&my_editor });
 
@@ -231,7 +250,7 @@ party objetcs, for example:
 (A more realistic example might actually use an inclusion filter, not
 an inclusion filter.)
 
-=item B<prune>
+=head2 prune
 
     Class::Rebless->prune("__PRUNE__");
     Class::Rebless->custom($myobj, "MyName", { editor => \&pruning_editor });
@@ -245,8 +264,6 @@ with members belonging to 3rd party classes that your object might be
 holding. Using the noio example above, the "return" can be changed to
 "return '__PRUNE__'". Anything the IO object refers to will not be
 visited by Class::Rebless.
-
-=back
 
 =head1 CAVEATS
 

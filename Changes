@@ -1,3 +1,11 @@
+Thu Jul  7 15:30:48 EDT 2011
+
+* This be 0.10.
+* Do not revisit already-edited objects unless specifically requested (RJBS)
+* Remove one level of subroutine calling when recursing (RJBS)
+* Eliminate a bug whereby nodes were visited multiple times even when they
+  should have been skipped by existing safeguards (RJBS)
+
 Tue, 22 Mar 2011 09:23:10 +0200  Gaal Yahas  <gaal@forum2.org>
 
 * This be 0.09.
