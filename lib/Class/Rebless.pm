@@ -75,8 +75,8 @@ sub _recurse {
 
     my $refaddr = Scalar::Util::refaddr($obj);
     if (defined $refaddr) {
-      return $obj if $state->{stack}{$refaddr};
       return $obj if $state->{seen}{$refaddr}++ and ! $opts->{revisit};
+      return $obj if $state->{stack}{$refaddr};
     }
 
     local $state->{level} = $state->{level} + 1;
