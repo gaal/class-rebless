@@ -77,4 +77,4 @@ sub make_struct {
   );
 }
 
-END { done_testing; }
+done_testing;
