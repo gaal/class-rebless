@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 use strict;
 
-use Test::More;
+use Test::More 'no_plan';
 use Data::Dumper;
 use Scalar::Util qw(blessed);
 
@@ -330,9 +330,6 @@ require_ok 'Class::Rebless';
   Class::Rebless->rebless($obj_1, 'Foo');
 }
 
-# in an END{} because there's a previously-registered END{} for
-# Test::NoWarnings, potentially -- rjbs, 2011-03-21
-END { done_testing; }
 
 sub my_custom_editor {
   my ($obj, $namespace) = @_;
